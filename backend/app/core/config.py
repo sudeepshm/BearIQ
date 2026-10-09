@@ -28,9 +28,13 @@ class Settings(BaseSettings):
     api_key_hashes: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
-    def check_overlap(self):
+    def validate_and_sanitize(self):
         if self.chunk_overlap >= self.chunk_messages:
             raise ValueError("chunk_overlap must be smaller than chunk_messages")
+        if self.database_url.startswith("postgres://"):
+            self.database_url = self.database_url.replace("postgres://", "postgresql+psycopg://", 1)
+        elif self.database_url.startswith("postgresql://") and not self.database_url.startswith("postgresql+"):
+            self.database_url = self.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
         return self
 
 

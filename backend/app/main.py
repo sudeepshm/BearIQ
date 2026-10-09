@@ -1,19 +1,43 @@
+from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from app.api import memories, upload, integration
 from app.core.config import get_settings
-from app.db.database import engine
+from app.db.database import engine, initialize
 from app.integrations.gemini import ProviderError
 
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Auto-initialize database tables and pgvector extension on startup (clean schema, zero dummy data)
+    try:
+        initialize()
+        logger.info("Database schema initialized successfully.")
+    except Exception as e:
+        logger.warning(f"Database schema initialization warning: {e}")
+    yield
+
+
 app = FastAPI(
-    title="BearIQ", version="0.1.0", description="Portable, evidence-backed long-term memory for AI applications."
+    title="BearIQ",
+    version="0.1.0",
+    description="Portable, evidence-backed long-term memory for AI applications.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://bear-iq-two.vercel.app",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:.*|http://127.0.0.1:.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,16 +89,19 @@ async def provider_error(request, exc):
     return JSONResponse(status_code=502, content={"detail": "AI provider unavailable or invalid response; retry later"})
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
 
 
-@app.get("/ready")
+@app.api_route("/ready", methods=["GET", "HEAD"])
 def ready():
     try:
         with engine().connect() as conn:
             conn.execute(text("SELECT 1 FROM users LIMIT 1"))
         return {"status": "ready"}
-    except Exception:
-        return JSONResponse(status_code=503, content={"status": "database unavailable or schema not initialized"})
+    except Exception as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "database unavailable or schema not initialized", "detail": str(exc)},
+        )
