@@ -1,4 +1,5 @@
 from functools import lru_cache
+import urllib.parse
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -31,10 +32,20 @@ class Settings(BaseSettings):
     def validate_and_sanitize(self):
         if self.chunk_overlap >= self.chunk_messages:
             raise ValueError("chunk_overlap must be smaller than chunk_messages")
-        if self.database_url.startswith("postgres://"):
-            self.database_url = self.database_url.replace("postgres://", "postgresql+psycopg://", 1)
-        elif self.database_url.startswith("postgresql://") and not self.database_url.startswith("postgresql+"):
-            self.database_url = self.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
+        # Fix unencoded '@' characters inside password in database_url
+        if "://" in self.database_url:
+            proto, rest = self.database_url.split("://", 1)
+            if rest.count("@") > 1:
+                user_pass, host_part = rest.rsplit("@", 1)
+                if ":" in user_pass:
+                    user, password = user_pass.split(":", 1)
+                    encoded_password = urllib.parse.quote(urllib.parse.unquote(password), safe="")
+                    rest = f"{user}:{encoded_password}@{host_part}"
+            if proto in ("postgres", "postgresql"):
+                proto = "postgresql+psycopg"
+            self.database_url = f"{proto}://{rest}"
+
         return self
 
 
