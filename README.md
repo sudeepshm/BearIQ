@@ -2,6 +2,8 @@
 
 **Give AI a memory it can carry.**
 
+🚀 **Live Demo:** <https://bear-iq-two.vercel.app/>
+
 BearIQ is a portable memory layer that turns historical AI conversations
 into structured, evidence-backed, reusable memories. AI applications and
 agents can retrieve relevant context instead of starting from scratch
@@ -52,7 +54,7 @@ generation/export. Do not show planned features as working features.
 
 ### System architecture
 
-``` mermaid
+```mermaid mermaid
 flowchart TD
     A[ChatGPT Export ZIP] --> B[ZIP Validation]
     B --> C[Conversation Parser]
@@ -71,13 +73,13 @@ flowchart TD
 
 ### Import sequence
 
-``` mermaid
+```mermaid mermaid
 sequenceDiagram
     actor User
     participant UI as BearIQ UI
     participant API as FastAPI
     participant Parser as ZIP Validator / Parser
-    participant AI as Gemini, if configured
+    participant AI as Gemini via Google Gen AI SDK, if configured
     participant DB as PostgreSQL + pgvector
 
     User->>UI: Upload ChatGPT export ZIP
@@ -172,6 +174,27 @@ A dependency or environment-variable name alone does not prove a working
 integration. Include configuration instructions, the relevant code path,
 and a demo/deployment link where possible.
 
+## Google Technologies and Integrations
+
+BearIQ's AI workflow can use Google's tools where applicable. Be precise about what is actually integrated in the submitted code:
+
+- **Gemini API + Google Gen AI SDK (`google-genai`)** — structured memory extraction, ambiguous classification, and skill generation, if called by the backend.
+- **Gemini Embedding** — semantic retrieval and similarity-based deduplication, if implemented.
+- **Vertex AI** — Google Cloud option for managed Gemini and embedding access.
+- **Google Cloud Run** — optional backend deployment target; the frontend demo is hosted at Vercel.
+- **Cloud SQL for PostgreSQL + pgvector** — optional managed database.
+- **Cloud Storage** — optional persistent storage for uploaded archives.
+- **Secret Manager** — optional production storage for API credentials.
+
+**Submission status (fill this in accurately):**
+- **Implemented and working:** `[List Google services actually called by the code]`
+- **Partially configured:** `[List partial integrations]`
+- **Planned only:** `[List services not yet connected]`
+
+Do not claim a Google integration based only on a dependency, environment variable, or planned architecture. Link the relevant code and demonstrate it working.
+
+Official references: [Google Gen AI SDK](https://cloud.google.com/vertex-ai/generative-ai/docs/sdks/overview), [Gemini on Vertex AI quickstart](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart), [Text embeddings](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings).
+
 ## Step-by-Step Code Execution Instructions
 
 These commands assume the repository contains `backend/` and
@@ -223,6 +246,12 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+If the backend uses Google's Gemini API through the official Python SDK and it is not already included in `requirements.txt`, install:
+
+```bash
+pip install google-genai
+```
+
 If `.env.example` exists, copy it:
 
 ``` bash
@@ -235,7 +264,7 @@ values might look like:
 
 ``` dotenv
 DATABASE_URL=postgresql+psycopg://USER:PASSWORD@localhost:5432/beariq
-GEMINI_API_KEY=your_key_here
+GEMINI_API_KEY=your_key_here  # only if the code uses the Gemini Developer API key
 ```
 
 Do not commit `.env`, API keys, or database credentials. Omit optional
@@ -413,4 +442,3 @@ endpoint already exists.
 ## License
 
 Add the license selected for this project before public distribution.
-- **Live Demo:** [BearIQ](https://bear-iq-two.vercel.app/)
